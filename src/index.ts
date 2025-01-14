@@ -5,6 +5,8 @@ import path from 'path';
 import fs from 'fs-extra';
 import inquirer from 'inquirer';
 import chalk from 'chalk';
+import ora from 'ora'; // Import ora for spinner functionality
+import { execSync } from 'child_process';  // To run git commands
 
 // For ESM, use this to get the current directory of the module
 const __filename = fileURLToPath(import.meta.url);
@@ -37,10 +39,12 @@ const templateDir = path.resolve(__dirname, '..', '..', 'src', 'templates', temp
 const targetDir = path.resolve(process.cwd(), projectName); // Target directory for the new project
 
 async function setupProject() {
+    const spinner = ora('Starting the setup process...').start(); // Initialize spinner
+
     try {
         // Check if the template directory exists
         if (!fs.existsSync(templateDir)) {
-            console.error(chalk.red(`Template directory not found: ${templateDir}`));
+            spinner.fail(`Template directory not found: ${templateDir}`);
             return;
         }
 
@@ -51,21 +55,46 @@ async function setupProject() {
             fs.mkdirSync(targetDir, { recursive: true }); // Create the target directory if it doesn't exist
         }
 
-        // Log before copying
-        console.log('Starting the copy operation...');
-
-        // Copy the selected template to the target directory
-        console.log(`Copying template to ${targetDir}...`);
-        await fs.copy(templateDir, targetDir); // This is the async operation
+        // Start copying raw template files (exclude .git directory)
+        spinner.text = `Copying raw template files to ${targetDir}...`;
+        await fs.copy(templateDir, targetDir, {
+            // Exclude .git directory if present in the template
+            filter: (src) => !src.includes('.git'),
+        });
 
         // Check if the project directory exists after the copy operation
         if (fs.existsSync(targetDir)) {
-            console.log(chalk.green(`Files copied successfully. Your project is ready at ${targetDir}`));
+            spinner.succeed(chalk.green(`Files copied successfully. Your project is ready at ${targetDir}`));
+
+            // Initialize a new Git repository
+            spinner.start('Initializing a new Git repository...');
+            execSync('git init', { cwd: targetDir }); // Initialize Git in the target directory
+            spinner.succeed('Git repository initialized');
+
+            // Optionally: Add remote origin (ask user for GitHub URL, for example)
+            // const { remoteUrl } = await inquirer.prompt([
+            //     {
+            //         type: 'input',
+            //         name: 'remoteUrl',
+            //         message: 'Enter your GitHub repository URL (optional):',
+            //         default: '',
+            //     },
+            // ]);
+            //
+            // if (remoteUrl) {
+            //     // Set the remote origin
+            //     execSync(`git remote add origin ${remoteUrl}`, { cwd: targetDir });
+            //     execSync('git branch -M main', { cwd: targetDir });  // Rename branch to 'main'
+            //     spinner.start('Pushing to remote repository...');
+            //     execSync('git push -u origin main', { cwd: targetDir });
+            //     spinner.succeed('Pushed to remote repository');
+            // }
         } else {
-            console.error(chalk.red(`Error: Files were not copied to ${targetDir}.`));
+            spinner.fail(chalk.red(`Error: Files were not copied to ${targetDir}.`));
         }
 
     } catch (error) {
+        spinner.fail('Error during setup');
         console.error(chalk.red('Error during setup'), error);
     }
 }
