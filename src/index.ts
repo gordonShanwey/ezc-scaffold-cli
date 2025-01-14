@@ -11,7 +11,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Define available templates
-const templates = ['ts-cloudrun', 'ts-node', 'ts-express']; // Example templates, add more if needed
+const templates = ['ts-cloudrun']; // Example templates, add more if needed
 
 // Ask for project name and template selection
 const answers = await inquirer.prompt([
@@ -51,11 +51,20 @@ async function setupProject() {
             fs.mkdirSync(targetDir, { recursive: true }); // Create the target directory if it doesn't exist
         }
 
+        // Log before copying
+        console.log('Starting the copy operation...');
+
         // Copy the selected template to the target directory
         console.log(`Copying template to ${targetDir}...`);
-        await fs.copy(templateDir, targetDir); // Use async version to wait until files are copied
+        await fs.copy(templateDir, targetDir); // This is the async operation
 
-        console.log(chalk.green(`Your project is ready at ${targetDir}`));
+        // Check if the project directory exists after the copy operation
+        if (fs.existsSync(targetDir)) {
+            console.log(chalk.green(`Files copied successfully. Your project is ready at ${targetDir}`));
+        } else {
+            console.error(chalk.red(`Error: Files were not copied to ${targetDir}.`));
+        }
+
     } catch (error) {
         console.error(chalk.red('Error during setup'), error);
     }

@@ -44,7 +44,7 @@ if [[ ":$PATH:" != *":$BIN_DIR:"* ]]; then
 fi
 
 # Test the CLI tool
-echo "Testing the CLI tool..."
-ezc-scaffold-cli create_project
+#echo "Testing the CLI tool..."
+#ezc-scaffold-cli create_project
 
 echo "Linking process completed!"
